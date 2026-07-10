@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VULCAN CORE // 100% STANDALONE DISPOSABLE MATRIX</title>
+    <title>VULCAN CORE // IMAGEN STUDIO</title>
+    <script src="https://js.puter.com/v2/"></script>
     <style>
         :root {
             --bg-base: #0a0b10;
@@ -16,239 +17,185 @@
         }
         body {
             background-color: var(--bg-base); color: var(--text-main);
-            font-family: 'Segoe UI', sans-serif; margin: 0; padding: 25px;
-            display: flex; flex-direction: column; height: 100vh; box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0; padding: 25px; box-sizing: border-box;
+            display: flex; flex-direction: column; height: 100vh;
         }
-        .hud-panel {
-            background: var(--bg-surface); padding: 20px; border-radius: 10px;
+        /* Top Navigation Header */
+        .hud-header {
+            background: var(--bg-surface); padding: 18px 25px; border-radius: 10px;
             border: 2px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
-            display: flex; gap: 20px; align-items: center; margin-bottom: 25px;
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
         }
-        .hud-panel h1 { margin: 0; font-size: 22px; color: var(--accent-cyan); letter-spacing: 1px; text-transform: uppercase; }
-        .input-box {
-            background: var(--bg-base); border: 1px solid var(--text-muted);
-            padding: 12px; color: #fff; border-radius: 6px; font-weight: bold; width: 180px; outline: none;
+        .hud-header h1 {
+            margin: 0; font-size: 22px; letter-spacing: 1px;
+            color: var(--accent-cyan); text-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+        .status-badge {
+            background: rgba(0, 243, 255, 0.1); border: 1px solid var(--accent-cyan);
+            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        /* Chat/Image Workspace */
+        .viewport-container {
+            flex: 1; display: flex; gap: 25px; min-height: 0;
+        }
+        
+        /* Left Column: Conversation Log */
+        .chat-panel {
+            flex: 1; background: var(--bg-surface); border-radius: 10px;
+            border: 1px solid var(--bg-card); display: flex; flex-direction: column; padding: 20px;
+        }
+        .chat-history {
+            flex: 1; overflow-y: auto; padding-right: 10px;
+            display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;
+        }
+        .chat-bubble {
+            padding: 14px 18px; border-radius: 8px; max-width: 85%;
+            font-size: 15px; line-height: 1.5;
+        }
+        .bubble-user {
+            background: var(--bg-card); color: #fff; align-self: flex-end;
+            border-right: 4px solid var(--accent-cyan);
+        }
+        .bubble-ai {
+            background: #23273c; color: var(--text-main); align-self: flex-start;
+            border-left: 4px solid var(--accent-pink);
+        }
+
+        /* Action HUD / Input Bar */
+        .input-wrapper {
+            display: flex; gap: 12px; background: var(--bg-base);
+            padding: 8px; border-radius: 8px; border: 1px solid var(--text-muted);
+        }
+        .prompt-input {
+            flex: 1; background: transparent; border: none; outline: none;
+            color: #fff; font-size: 15px; padding: 10px; font-weight: 500;
         }
         .btn-generate {
             background: linear-gradient(135deg, var(--accent-cyan), #00a2ff);
             border: none; padding: 12px 24px; color: #000; font-weight: 800;
             border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: 0.2s;
         }
-        .btn-generate:hover { transform: scale(1.02); box-shadow: 0 0 15px var(--accent-cyan); }
+        .btn-generate:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 15px var(--accent-cyan); }
+        .btn-generate:disabled { background: var(--text-muted); cursor: not-allowed; }
+
+        /* Right Column: Active Canvas Frame */
+        .canvas-frame {
+            width: 450px; background: var(--bg-surface); border-radius: 10px;
+            border: 1px solid var(--bg-card); padding: 20px; display: flex;
+            flex-direction: column; align-items: center; justify-content: center; position: relative;
+        }
+        .output-image {
+            max-width: 100%; max-height: 100%; border-radius: 8px;
+            border: 1px solid var(--bg-card); display: none;
+            box-shadow: 0 0 25px rgba(0,0,0,0.5);
+        }
+        .canvas-placeholder {
+            color: var(--text-muted); font-weight: bold; text-align: center;
+        }
         
-        .workspace-core { display: flex; gap: 25px; flex: 1; min-height: 0; }
-        .sidebar-deck {
-            width: 380px; background: var(--bg-surface); border-radius: 10px;
-            border: 1px solid var(--bg-card); padding: 15px; display: flex;
-            flex-direction: column; gap: 12px; overflow-y: auto;
+        /* Glowing Matrix Loader */
+        .matrix-loader {
+            display: none; flex-direction: column; align-items: center; gap: 15px;
         }
-        .inbox-node {
-            background: var(--bg-card); padding: 14px; border-radius: 8px; border: 1px solid transparent;
-            cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s;
+        .spinner {
+            width: 50px; height: 50px; border: 4px solid var(--bg-card);
+            border-top-color: var(--accent-cyan); border-radius: 50%;
+            animation: spin 1s linear infinite; filter: drop-shadow(0 0 8px var(--accent-cyan));
         }
-        .inbox-node:hover, .inbox-node.active { border-color: var(--accent-cyan); background: #22263d; }
-        .email-string { font-size: 13px; font-family: monospace; color: #fff; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
-        .badge-count {
-            background: var(--accent-pink); color: white; border-radius: 20px;
-            padding: 2px 8px; font-size: 11px; font-weight: 900; display: none; box-shadow: 0 0 8px var(--accent-pink);
-        }
-        .btn-delete { color: var(--text-muted); font-weight: bold; cursor: pointer; padding: 2px 6px; transition: 0.2s; }
-        .btn-delete:hover { color: var(--accent-pink); }
-        
-        .terminal-viewport {
-            flex: 1; background: var(--bg-surface); border-radius: 10px;
-            border: 1px solid var(--bg-card); display: flex; flex-direction: column; padding: 25px;
-        }
-        .message-stream-list {
-            max-height: 180px; overflow-y: auto; border-bottom: 2px solid var(--bg-card);
-            margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; padding-bottom: 15px;
-        }
-        .message-row { 
-            background: var(--bg-card); padding: 14px; border-radius: 6px; cursor: pointer; 
-            border-left: 4px solid var(--accent-cyan); transition: 0.2s;
-        }
-        .message-row:hover { background: #22263d; }
-        .content-box-frame {
-            flex: 1; background: var(--bg-base); border-radius: 8px; padding: 20px; overflow-y: auto; color: #fff;
-            border: 1px solid var(--bg-card);
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-<div class="hud-panel">
-    <h1>Vulcan Free Matrix</h1>
-    <input type="number" id="count" class="input-box" min="1" max="50" value="5">
-    <button class="btn-generate" onclick="generateStandaloneMatrix()">Generate Fleet</button>
+<div class="hud-header">
+    <h1>Vulcan // Engine-Imagen</h1>
+    <div class="status-badge">AI CLOUD ONLINE</div>
 </div>
 
-<div class="workspace-core">
-    <div class="sidebar-deck" id="deckContainer">
-        <div style="color:var(--text-muted)">Matrix browser system offline. Input amount above.</div>
+<div class="viewport-container">
+    <div class="chat-panel">
+        <div class="chat-history" id="chatHistory">
+            <div class="chat-bubble bubble-ai">
+                System online. Describe the image structure you wish to materialize within the main frame...
+            </div>
+        </div>
+        <div class="input-wrapper">
+            <input type="text" id="promptInput" class="prompt-input" placeholder="Type image prompt here... (e.g. A neon cybernetic fox)" onkeydown="if(event.key === 'Enter') processImageHandshake()">
+            <button id="genBtn" class="btn-generate" onclick="processImageHandshake()">Generate</button>
+        </div>
     </div>
-    <div class="terminal-viewport">
-        <h3 style="margin-top:0; color: var(--accent-cyan);" id="currentViewingTitle">SELECT ACTIVE EMAIL NODE</h3>
-        <div class="message-stream-list" id="streamContainer"></div>
-        <div class="content-box-frame" id="bodyContainer">Select an email from the stream above to read it...</div>
+
+    <div class="canvas-frame" id="canvasFrame">
+        <div class="canvas-placeholder" id="placeholderText">IMAGE CORE EMPTY<br><span style="font-size: 12px; font-weight: normal; color:#475569">Awaiting instruction processing pipeline...</span></div>
+        
+        <div class="matrix-loader" id="loader">
+            <div class="spinner"></div>
+            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 14px; letter-spacing:1px">RENDERING FRAME BYTES...</div>
+        </div>
+        
+        <img id="outputImg" class="output-image" alt="AI Visual Matrix Asset">
     </div>
 </div>
 
 <script>
-    let activeNodes = [];
-    let selectedNode = null;
-    let daemon = null;
-    const MAIL_API = "https://api.mail.tm";
-    let activeDomain = "";
-
-    // Queries the global mail registries natively right from your browser network
-    async function initDomainPool() {
-        try {
-            const res = await fetch(`${MAIL_API}/domains`);
-            const data = await res.json();
-            if (data['hydra:member'] && data['hydra:member'].length > 0) {
-                activeDomain = data['hydra:member'][0].domain;
-            }
-        } catch (err) {
-            console.log("Network registry handshake dropped.");
-        }
-    }
-
-    async function generateStandaloneMatrix() {
-        const count = parseInt(document.getElementById('count').value) || 1;
-        document.getElementById('deckContainer').innerHTML = "<div style='color: var(--accent-cyan)'>Syncing directly to Mail.tm relays...</div>";
+    async function processImageHandshake() {
+        const inputField = document.getElementById('promptInput');
+        const promptText = inputField.value.trim();
+        const genButton = document.getElementById('genBtn');
         
-        if (!activeDomain) await initDomainPool();
+        if (!promptText) return;
 
-        activeNodes = [];
-        for (let i = 0; i < count; i++) {
-            // Generates an automated clean, random username sequence
-            const randomString = Math.random().toString(36).substring(2, 12);
-            const emailAddress = `${randomString}@${activeDomain}`.toLowerCase();
-            const securePassword = `VulcPass_${Math.floor(1000 + Math.random() * 9000)}!`;
+        // Freeze Inputs during transaction execution
+        inputField.value = "";
+        inputField.disabled = true;
+        genButton.disabled = true;
 
-            try {
-                // Register the account structure dynamically
-                const createRes = await fetch(`${MAIL_API}/accounts`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ address: emailAddress, password: securePassword })
-                });
-                
-                if (createRes.ok) {
-                    // Pull down your transmission clearance verification key
-                    const authRes = await fetch(`${MAIL_API}/token`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ address: emailAddress, password: securePassword })
-                    });
-                    const authData = await authRes.json();
-                    activeNodes.push({ email: emailAddress, token: authData.token });
-                }
-            } catch (err) {
-                console.log("Account registry skipped.");
-            }
-        }
-        
-        renderDeck();
-        if(daemon) clearInterval(daemon);
-        daemon = setInterval(pollInboxes, 3000); // Live scanning every 3 seconds
-    }
+        // Print user entry bubble to conversation log
+        appendBubble(promptText, 'user');
 
-    function renderDeck() {
-        const container = document.getElementById('deckContainer');
-        container.innerHTML = activeNodes.length === 0 ? "<div style='color:var(--text-muted)'>No active emails.</div>" : "";
-        activeNodes.forEach((node, index) => {
-            const row = document.createElement('div');
-            row.className = `inbox-node ${selectedNode?.email === node.email ? 'active' : ''}`;
-            row.setAttribute('onclick', `selectNode(${index})`);
-            row.innerHTML = `
-                <div class="email-string">${node.email}</div>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <span class="badge-count" id="badge-${index}">0</span>
-                    <span class="btn-delete" onclick="deleteNode(event, ${index})">✕</span>
-                </div>
-            `;
-            container.appendChild(row);
-        });
-    }
+        // Toggle UI frame visualization nodes to processing state
+        document.getElementById('placeholderText').style.display = 'none';
+        document.getElementById('outputImg').style.display = 'none';
+        document.getElementById('loader').style.display = 'flex';
 
-    function selectNode(index) {
-        selectedNode = activeNodes[index];
-        renderDeck();
-        document.getElementById('currentViewingTitle').innerText = selectedNode.email;
-        fetchMail();
-    }
-
-    function deleteNode(event, index) {
-        event.stopPropagation(); // Stop the node from selecting when you hit delete
-        if (selectedNode?.email === activeNodes[index].email) {
-            selectedNode = null;
-            document.getElementById('currentViewingTitle').innerText = "SELECT ACTIVE EMAIL NODE";
-            document.getElementById('streamContainer').innerHTML = "";
-            document.getElementById('bodyContainer').innerHTML = "Select an email from the stream above to read it...";
-        }
-        activeNodes.splice(index, 1);
-        renderDeck();
-    }
-
-    async function fetchMail() {
-        if (!selectedNode) return;
         try {
-            const res = await fetch(`${MAIL_API}/messages`, {
-                headers: { Authorization: `Bearer ${selectedNode.token}` }
-            });
-            const data = await res.json();
-            const container = document.getElementById('streamContainer');
-            container.innerHTML = data['hydra:member'].length === 0 ? "<div style='color:var(--text-muted); padding: 10px;'>Awaiting incoming message data...</div>" : "";
+            // Native free Puter.js AI text-to-image pipeline call
+            const imageBlob = await puter.ai.txt2img(promptText);
             
-            data['hydra:member'].forEach(msg => {
-                const div = document.createElement('div');
-                div.className = "message-row";
-                div.onclick = () => loadBody(msg.id);
-                div.innerHTML = `
-                    <div style="color:var(--accent-cyan); font-size:12px; font-weight: bold;">From: ${msg.from.address}</div>
-                    <div style="font-weight:bold; margin-top:3px; color:#fff;">${msg.subject || '(No Subject)'}</div>
-                `;
-                container.appendChild(div);
-            });
-        } catch(e) {}
-    }
+            // Turn the raw response binary data stream directly into a viewable URL
+            const renderUrl = URL.createObjectURL(imageBlob);
+            
+            // Draw image on the canvas preview slot
+            const imgElement = document.getElementById('outputImg');
+            imgElement.src = renderUrl;
+            imgElement.style.display = 'block';
 
-    async function loadBody(id) {
-        if (!selectedNode) return;
-        document.getElementById('bodyContainer').innerHTML = "<div style='color: var(--accent-cyan)'>Downloading and parsing data streams...</div>";
-        try {
-            const res = await fetch(`${MAIL_API}/messages/${id}`, {
-                headers: { Authorization: `Bearer ${selectedNode.token}` }
-            });
-            const data = await res.json();
-            // Injects actual incoming text data layouts dynamically
-            document.getElementById('bodyContainer').innerHTML = data.html || `<pre style="color:#fff">${data.text}</pre>`;
-        } catch(e) {
-            document.getElementById('bodyContainer').innerHTML = "Failed to render email contents.";
+            // Print AI verification notice inside chat logs
+            appendBubble(`Image generated successfully for context request: "${promptText}"`, 'ai');
+
+        } catch (error) {
+            console.error(error);
+            appendBubble("Fatal connection error occurred within the generation thread layer.", 'ai');
+            document.getElementById('placeholderText').style.display = 'block';
+        } finally {
+            // Flush loading animation layers and restore core inputs
+            document.getElementById('loader').style.display = 'none';
+            inputField.disabled = false;
+            genButton.disabled = false;
+            inputField.focus();
         }
     }
 
-    async function pollInboxes() {
-        activeNodes.forEach(async (node, index) => {
-            try {
-                const res = await fetch(`${MAIL_API}/messages`, {
-                    headers: { Authorization: `Bearer ${node.token}` }
-                });
-                const data = await res.json();
-                const badge = document.getElementById(`badge-${index}`);
-                if (badge) {
-                    const count = data['hydra:member'].length;
-                    if (count > 0) {
-                        badge.innerText = count;
-                        badge.style.display = "block";
-                        if (selectedNode?.email === node.email) fetchMail();
-                    } else {
-                        badge.style.display = "none";
-                    }
-                }
-            } catch(e) {}
-        });
+    function appendBubble(text, sender) {
+        const history = document.getElementById('chatHistory');
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble bubble-${sender}`;
+        bubble.innerText = text;
+        history.appendChild(bubble);
+        history.scrollTop = history.scrollHeight; // Auto-scrolls user window down
     }
 </script>
 </body>

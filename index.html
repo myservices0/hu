@@ -1,202 +1,54 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VULCAN CORE // IMAGEN STUDIO</title>
-    <script src="https://js.puter.com/v2/"></script>
-    <style>
-        :root {
-            --bg-base: #0a0b10;
-            --bg-surface: #141622;
-            --bg-card: #1c1f30;
-            --accent-cyan: #00f3ff;
-            --accent-pink: #ff0077;
-            --text-main: #e2e8f0;
-            --text-muted: #64748b;
-        }
-        body {
-            background-color: var(--bg-base); color: var(--text-main);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0; padding: 25px; box-sizing: border-box;
-            display: flex; flex-direction: column; height: 100vh;
-        }
-        /* Top Navigation Header */
-        .hud-header {
-            background: var(--bg-surface); padding: 18px 25px; border-radius: 10px;
-            border: 2px solid var(--accent-cyan); box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
-            display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;
-        }
-        .hud-header h1 {
-            margin: 0; font-size: 22px; letter-spacing: 1px;
-            color: var(--accent-cyan); text-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
-        }
-        .status-badge {
-            background: rgba(0, 243, 255, 0.1); border: 1px solid var(--accent-cyan);
-            padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;
-            color: var(--accent-cyan);
-        }
+async function processImageHandshake() {
+    const inputField = document.getElementById('promptInput');
+    const promptText = inputField.value.trim();
+    const genButton = document.getElementById('genBtn');
+    
+    if (!promptText) return;
 
-        /* Chat/Image Workspace */
-        .viewport-container {
-            flex: 1; display: flex; gap: 25px; min-height: 0;
-        }
-        
-        /* Left Column: Conversation Log */
-        .chat-panel {
-            flex: 1; background: var(--bg-surface); border-radius: 10px;
-            border: 1px solid var(--bg-card); display: flex; flex-direction: column; padding: 20px;
-        }
-        .chat-history {
-            flex: 1; overflow-y: auto; padding-right: 10px;
-            display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;
-        }
-        .chat-bubble {
-            padding: 14px 18px; border-radius: 8px; max-width: 85%;
-            font-size: 15px; line-height: 1.5;
-        }
-        .bubble-user {
-            background: var(--bg-card); color: #fff; align-self: flex-end;
-            border-right: 4px solid var(--accent-cyan);
-        }
-        .bubble-ai {
-            background: #23273c; color: var(--text-main); align-self: flex-start;
-            border-left: 4px solid var(--accent-pink);
-        }
+    inputField.value = "";
+    inputField.disabled = true;
+    genButton.disabled = true;
 
-        /* Action HUD / Input Bar */
-        .input-wrapper {
-            display: flex; gap: 12px; background: var(--bg-base);
-            padding: 8px; border-radius: 8px; border: 1px solid var(--text-muted);
-        }
-        .prompt-input {
-            flex: 1; background: transparent; border: none; outline: none;
-            color: #fff; font-size: 15px; padding: 10px; font-weight: 500;
-        }
-        .btn-generate {
-            background: linear-gradient(135deg, var(--accent-cyan), #00a2ff);
-            border: none; padding: 12px 24px; color: #000; font-weight: 800;
-            border-radius: 6px; cursor: pointer; text-transform: uppercase; transition: 0.2s;
-        }
-        .btn-generate:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 15px var(--accent-cyan); }
-        .btn-generate:disabled { background: var(--text-muted); cursor: not-allowed; }
+    appendBubble(promptText, 'user');
 
-        /* Right Column: Active Canvas Frame */
-        .canvas-frame {
-            width: 450px; background: var(--bg-surface); border-radius: 10px;
-            border: 1px solid var(--bg-card); padding: 20px; display: flex;
-            flex-direction: column; align-items: center; justify-content: center; position: relative;
-        }
-        .output-image {
-            max-width: 100%; max-height: 100%; border-radius: 8px;
-            border: 1px solid var(--bg-card); display: none;
-            box-shadow: 0 0 25px rgba(0,0,0,0.5);
-        }
-        .canvas-placeholder {
-            color: var(--text-muted); font-weight: bold; text-align: center;
-        }
-        
-        /* Glowing Matrix Loader */
-        .matrix-loader {
-            display: none; flex-direction: column; align-items: center; gap: 15px;
-        }
-        .spinner {
-            width: 50px; height: 50px; border: 4px solid var(--bg-card);
-            border-top-color: var(--accent-cyan); border-radius: 50%;
-            animation: spin 1s linear infinite; filter: drop-shadow(0 0 8px var(--accent-cyan));
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
-</head>
-<body>
+    document.getElementById('placeholderText').style.display = 'none';
+    document.getElementById('outputImg').style.display = 'none';
+    document.getElementById('loader').style.display = 'flex';
 
-<div class="hud-header">
-    <h1>Vulcan // Engine-Imagen</h1>
-    <div class="status-badge">AI CLOUD ONLINE</div>
-</div>
-
-<div class="viewport-container">
-    <div class="chat-panel">
-        <div class="chat-history" id="chatHistory">
-            <div class="chat-bubble bubble-ai">
-                System online. Describe the image structure you wish to materialize within the main frame...
-            </div>
-        </div>
-        <div class="input-wrapper">
-            <input type="text" id="promptInput" class="prompt-input" placeholder="Type image prompt here... (e.g. A neon cybernetic fox)" onkeydown="if(event.key === 'Enter') processImageHandshake()">
-            <button id="genBtn" class="btn-generate" onclick="processImageHandshake()">Generate</button>
-        </div>
-    </div>
-
-    <div class="canvas-frame" id="canvasFrame">
-        <div class="canvas-placeholder" id="placeholderText">IMAGE CORE EMPTY<br><span style="font-size: 12px; font-weight: normal; color:#475569">Awaiting instruction processing pipeline...</span></div>
-        
-        <div class="matrix-loader" id="loader">
-            <div class="spinner"></div>
-            <div style="color: var(--accent-cyan); font-weight: bold; font-size: 14px; letter-spacing:1px">RENDERING FRAME BYTES...</div>
-        </div>
-        
-        <img id="outputImg" class="output-image" alt="AI Visual Matrix Asset">
-    </div>
-</div>
-
-<script>
-    async function processImageHandshake() {
-        const inputField = document.getElementById('promptInput');
-        const promptText = inputField.value.trim();
-        const genButton = document.getElementById('genBtn');
-        
-        if (!promptText) return;
-
-        // Freeze Inputs during transaction execution
-        inputField.value = "";
-        inputField.disabled = true;
-        genButton.disabled = true;
-
-        // Print user entry bubble to conversation log
-        appendBubble(promptText, 'user');
-
-        // Toggle UI frame visualization nodes to processing state
-        document.getElementById('placeholderText').style.display = 'none';
-        document.getElementById('outputImg').style.display = 'none';
-        document.getElementById('loader').style.display = 'flex';
-
+    // Retry Loop Configuration
+    let success = false;
+    let attempts = 0;
+    
+    while (!success && attempts < 3) {
         try {
-            // Native free Puter.js AI text-to-image pipeline call
-            const imageBlob = await puter.ai.txt2img(promptText);
+            attempts++;
+            if(attempts > 1) {
+                appendBubble(`Connection congested. Retrying line match (Attempt ${attempts}/3)...`, 'ai');
+                await new Promise(r => setTimeout(r, 2000)); // Wait 2 seconds before retrying
+            }
             
-            // Turn the raw response binary data stream directly into a viewable URL
+            // Execute AI draw stream
+            const imageBlob = await puter.ai.txt2img(promptText);
             const renderUrl = URL.createObjectURL(imageBlob);
             
-            // Draw image on the canvas preview slot
             const imgElement = document.getElementById('outputImg');
             imgElement.src = renderUrl;
             imgElement.style.display = 'block';
 
-            // Print AI verification notice inside chat logs
-            appendBubble(`Image generated successfully for context request: "${promptText}"`, 'ai');
+            appendBubble(`Image generated successfully!`, 'ai');
+            success = true;
 
         } catch (error) {
-            console.error(error);
-            appendBubble("Fatal connection error occurred within the generation thread layer.", 'ai');
-            document.getElementById('placeholderText').style.display = 'block';
-        } finally {
-            // Flush loading animation layers and restore core inputs
-            document.getElementById('loader').style.display = 'none';
-            inputField.disabled = false;
-            genButton.disabled = false;
-            inputField.focus();
+            console.log(`Attempt ${attempts} failed.`);
+            if(attempts >= 3) {
+                appendBubble("The free public AI node is currently overloaded. Wait 15 seconds and try a different prompt!", 'ai');
+                document.getElementById('placeholderText').style.display = 'block';
+            }
         }
     }
 
-    function appendBubble(text, sender) {
-        const history = document.getElementById('chatHistory');
-        const bubble = document.createElement('div');
-        bubble.className = `chat-bubble bubble-${sender}`;
-        bubble.innerText = text;
-        history.appendChild(bubble);
-        history.scrollTop = history.scrollHeight; // Auto-scrolls user window down
-    }
-</script>
-</body>
-</html>
+    document.getElementById('loader').style.display = 'none';
+    inputField.disabled = false;
+    genButton.disabled = false;
+    inputField.focus();
+}

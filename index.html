@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VULCAN CORE // INSTANT MAIL MATRIX</title>
+    <title>VULCAN CORE // 100% STANDALONE DISPOSABLE MATRIX</title>
     <style>
         :root {
             --bg-base: #0a0b10;
@@ -77,19 +77,19 @@
 <body>
 
 <div class="hud-panel">
-    <h1>Vulcan Core Matrix</h1>
+    <h1>Vulcan Free Matrix</h1>
     <input type="number" id="count" class="input-box" min="1" max="50" value="5">
-    <button class="btn-generate" onclick="generateRandomMatrix()">Generate Fleet</button>
+    <button class="btn-generate" onclick="generateStandaloneMatrix()">Generate Fleet</button>
 </div>
 
 <div class="workspace-core">
     <div class="sidebar-deck" id="deckContainer">
-        <div style="color:var(--text-muted)">Matrix terminal offline. Input values above.</div>
+        <div style="color:var(--text-muted)">Matrix browser system offline. Input amount above.</div>
     </div>
     <div class="terminal-viewport">
-        <h3 style="margin-top:0; color: var(--accent-cyan);" id="currentViewingTitle">SELECT ACTIVE INBOX NODE</h3>
+        <h3 style="margin-top:0; color: var(--accent-cyan);" id="currentViewingTitle">SELECT ACTIVE EMAIL NODE</h3>
         <div class="message-stream-list" id="streamContainer"></div>
-        <div class="content-box-frame" id="bodyContainer">Select an email above to view its contents...</div>
+        <div class="content-box-frame" id="bodyContainer">Select an email from the stream above to read it...</div>
     </div>
 </div>
 
@@ -97,31 +97,66 @@
     let activeNodes = [];
     let selectedNode = null;
     let daemon = null;
+    const MAIL_API = "https://api.mail.tm";
+    let activeDomain = "";
 
-    async function generateRandomMatrix() {
-        const count = parseInt(document.getElementById('count').value) || 1;
-        document.getElementById('deckContainer').innerHTML = "<div style='color: var(--accent-cyan)'>Initializing cloud proxy routing lines...</div>";
-        
+    // Queries the global mail registries natively right from your browser network
+    async function initDomainPool() {
         try {
-            const res = await fetch('/api/create-matrix', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ count })
-            });
+            const res = await fetch(`${MAIL_API}/domains`);
             const data = await res.json();
-            activeNodes = data.accounts;
-            renderDeck();
-            
-            if(daemon) clearInterval(daemon);
-            daemon = setInterval(pollInboxes, 3000); // Scans the network every 3 seconds for new incoming mail
+            if (data['hydra:member'] && data['hydra:member'].length > 0) {
+                activeDomain = data['hydra:member'][0].domain;
+            }
         } catch (err) {
-            document.getElementById('deckContainer').innerHTML = "<div style='color: var(--accent-pink)'>Error connecting to server backend. Try again in 5 seconds!</div>";
+            console.log("Network registry handshake dropped.");
         }
+    }
+
+    async function generateStandaloneMatrix() {
+        const count = parseInt(document.getElementById('count').value) || 1;
+        document.getElementById('deckContainer').innerHTML = "<div style='color: var(--accent-cyan)'>Syncing directly to Mail.tm relays...</div>";
+        
+        if (!activeDomain) await initDomainPool();
+
+        activeNodes = [];
+        for (let i = 0; i < count; i++) {
+            // Generates an automated clean, random username sequence
+            const randomString = Math.random().toString(36).substring(2, 12);
+            const emailAddress = `${randomString}@${activeDomain}`.toLowerCase();
+            const securePassword = `VulcPass_${Math.floor(1000 + Math.random() * 9000)}!`;
+
+            try {
+                // Register the account structure dynamically
+                const createRes = await fetch(`${MAIL_API}/accounts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: emailAddress, password: securePassword })
+                });
+                
+                if (createRes.ok) {
+                    // Pull down your transmission clearance verification key
+                    const authRes = await fetch(`${MAIL_API}/token`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ address: emailAddress, password: securePassword })
+                    });
+                    const authData = await authRes.json();
+                    activeNodes.push({ email: emailAddress, token: authData.token });
+                }
+            } catch (err) {
+                console.log("Account registry skipped.");
+            }
+        }
+        
+        renderDeck();
+        if(daemon) clearInterval(daemon);
+        daemon = setInterval(pollInboxes, 3000); // Live scanning every 3 seconds
     }
 
     function renderDeck() {
         const container = document.getElementById('deckContainer');
-        container.innerHTML = activeNodes.length === 0 ? "<div style='color:var(--text-muted)'>No operational email channels running.</div>" : "";
+        container.innerHTML = activeNodes.length === 0 ? "<div style='color:var(--text-muted)'>No active emails.</div>" : "";
         activeNodes.forEach((node, index) => {
             const row = document.createElement('div');
             row.className = `inbox-node ${selectedNode?.email === node.email ? 'active' : ''}`;
@@ -140,17 +175,17 @@
     function selectNode(index) {
         selectedNode = activeNodes[index];
         renderDeck();
-        document.getElementById('currentViewingTitle').innerText = `NODE STREAM // ${selectedNode.email}`;
+        document.getElementById('currentViewingTitle').innerText = selectedNode.email;
         fetchMail();
     }
 
     function deleteNode(event, index) {
-        event.stopPropagation();
+        event.stopPropagation(); // Stop the node from selecting when you hit delete
         if (selectedNode?.email === activeNodes[index].email) {
             selectedNode = null;
-            document.getElementById('currentViewingTitle').innerText = "SELECT ACTIVE INBOX NODE";
+            document.getElementById('currentViewingTitle').innerText = "SELECT ACTIVE EMAIL NODE";
             document.getElementById('streamContainer').innerHTML = "";
-            document.getElementById('bodyContainer').innerHTML = "Select an email above to view its contents...";
+            document.getElementById('bodyContainer').innerHTML = "Select an email from the stream above to read it...";
         }
         activeNodes.splice(index, 1);
         renderDeck();
@@ -158,40 +193,54 @@
 
     async function fetchMail() {
         if (!selectedNode) return;
-        const res = await fetch(`/api/messages?token=${selectedNode.token}`);
-        const data = await res.json();
-        const container = document.getElementById('streamContainer');
-        container.innerHTML = data.messages.length === 0 ? "<div style='color:var(--text-muted); padding: 10px;'>Awaiting incoming transmission bytes...</div>" : "";
-        
-        data.messages.forEach(msg => {
-            const div = document.createElement('div');
-            div.className = "message-row";
-            div.onclick = () => loadBody(msg.id);
-            div.innerHTML = `
-                <div style="color:var(--accent-cyan); font-size:12px; font-weight: bold;">From: ${msg.from.address}</div>
-                <div style="font-weight:bold; margin-top:3px; color:#fff;">${msg.subject || '(No Subject)'}</div>
-            `;
-            container.appendChild(div);
-        });
+        try {
+            const res = await fetch(`${MAIL_API}/messages`, {
+                headers: { Authorization: `Bearer ${selectedNode.token}` }
+            });
+            const data = await res.json();
+            const container = document.getElementById('streamContainer');
+            container.innerHTML = data['hydra:member'].length === 0 ? "<div style='color:var(--text-muted); padding: 10px;'>Awaiting incoming message data...</div>" : "";
+            
+            data['hydra:member'].forEach(msg => {
+                const div = document.createElement('div');
+                div.className = "message-row";
+                div.onclick = () => loadBody(msg.id);
+                div.innerHTML = `
+                    <div style="color:var(--accent-cyan); font-size:12px; font-weight: bold;">From: ${msg.from.address}</div>
+                    <div style="font-weight:bold; margin-top:3px; color:#fff;">${msg.subject || '(No Subject)'}</div>
+                `;
+                container.appendChild(div);
+            });
+        } catch(e) {}
     }
 
     async function loadBody(id) {
         if (!selectedNode) return;
-        document.getElementById('bodyContainer').innerHTML = "<div style='color: var(--accent-cyan)'>De-encrypting network content data...</div>";
-        const res = await fetch(`/api/message-body?id=${id}&token=${selectedNode.token}`);
-        const data = await res.json();
-        document.getElementById('bodyContainer').innerHTML = data.html;
+        document.getElementById('bodyContainer').innerHTML = "<div style='color: var(--accent-cyan)'>Downloading and parsing data streams...</div>";
+        try {
+            const res = await fetch(`${MAIL_API}/messages/${id}`, {
+                headers: { Authorization: `Bearer ${selectedNode.token}` }
+            });
+            const data = await res.json();
+            // Injects actual incoming text data layouts dynamically
+            document.getElementById('bodyContainer').innerHTML = data.html || `<pre style="color:#fff">${data.text}</pre>`;
+        } catch(e) {
+            document.getElementById('bodyContainer').innerHTML = "Failed to render email contents.";
+        }
     }
 
     async function pollInboxes() {
         activeNodes.forEach(async (node, index) => {
             try {
-                const res = await fetch(`/api/messages?token=${node.token}`);
+                const res = await fetch(`${MAIL_API}/messages`, {
+                    headers: { Authorization: `Bearer ${node.token}` }
+                });
                 const data = await res.json();
                 const badge = document.getElementById(`badge-${index}`);
                 if (badge) {
-                    if (data.messages.length > 0) {
-                        badge.innerText = data.messages.length;
+                    const count = data['hydra:member'].length;
+                    if (count > 0) {
+                        badge.innerText = count;
                         badge.style.display = "block";
                         if (selectedNode?.email === node.email) fetchMail();
                     } else {

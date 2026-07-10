@@ -26,12 +26,12 @@ async function processImageHandshake() {
                 await new Promise(r => setTimeout(r, 2000));
             }
             
-            // FIX: Pass prompt inside an object wrapper instead of a raw string
+            // FIX: Pass prompt inside an object wrapper, not a raw string
             const response = await puter.ai.txt2img({
                 prompt: promptText
             });
             
-            // FIX: Puter returns an object containing the direct image URL directly
+            // FIX: Puter natively supplies the image link via the .url property
             const imgElement = document.getElementById('outputImg');
             imgElement.src = response.url;
             imgElement.style.display = 'block';
